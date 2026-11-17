@@ -29,12 +29,20 @@ pipeline {
         stage('Verify') {
             steps {
                 sh 'kubectl get pods,svc'
-                sh 'sleep 5; curl -sf http://localhost:30080 | grep "Product Details"'
+                sh '''
+                    kubectl port-forward service/product-details-service 8089:80 > /dev/null 2>&1 &
+                    PF=$!
+                    sleep 5
+                    RESULT=0
+                    curl -sf http://localhost:8089 | grep "Product Details" || RESULT=1
+                    kill $PF
+                    exit $RESULT
+                '''
             }
         }
     }
     post {
-        success { echo 'Deployed! Open http://localhost:30080' }
+        success { echo 'Deployed! Run: kubectl port-forward service/product-details-service 8081:80 and open http://localhost:8081' }
         failure { echo 'Pipeline failed - check the Console Output' }
     }
 }
